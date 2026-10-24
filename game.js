@@ -11,7 +11,7 @@ const T = {
     hopp:'HOPP!', fart:'PUKI!', baa:'BEEE!', oops:'HUPSZ!', squish:'CUPP!', pop:'PUKK!', boing:'BOING!', bonk:'BUMM!', help:'SEGÍTS!',
     yelp:'AÚÚÚ!', ribbit:'BREKEKE!', cluck:'KOT-KOT!', disco:'DISZKÓ!', hihi:'HIHI!', cough:'KÖH-KÖH!', wolf:'FARKAS!', yum:'NYAMM!', splash:'LOCCS!',
     ctrl:'Mozgás: kar / WASD / nyilak · HOPP: A / Space / Enter · Szünet: Esc · Hang: M · Teljes képernyő: F',
-    touch:'Húzd az ujjad: a gazda követi · HOPP gomb: ijesztés', btn:'HOPP',
+    touch:'Bal oldal: mozgás · Jobb oldal: HOPP', btn:'HOPP', rotate:'Fordítsd el a telefont!', fs:'Teljes képernyő',
     thump:'DUMM!', strike:'TAROLÁS!', egg:'TOJÁS! +10', egg0:'TOJÁS!', yawn:'ÁÁÁSÍT…', hifive:'PACSI!', bell:'KOLOMP!', gold:'ARANYBARI!', stink:'BÜDI!',
     sticker:'Új matrica!', stickers:'Matricák', back:'HOPP = vissza', woof:'VAU!', saved:'MEGMENTVE!', locked:'Teljesíts pályákat a matricákért!',
     names:['Béla','Pamacs','Gombóc','Bolyhos','Mazsola','Panni','Zserbó','Bodri','Csutka','Berci','Géza','Fánk','Pihe','Kuki','Cukor','Babóca'] },
@@ -22,7 +22,7 @@ const T = {
     hopp:'HOP HOP!', fart:'PROUT!', baa:'BÊÊÊ!', oops:'OUPS!', squish:'SPLOTCH!', pop:'POP!', boing:'BOING!', bonk:'BONK!', help:'AU SECOURS!',
     yelp:'AÏE AÏE!', ribbit:'CROA!', cluck:'COT-COT!', disco:'DISCO!', hihi:'HIHI!', cough:'KOF KOF!', wolf:'LE LOUP!', yum:'MIAM!', splash:'PLOUF!',
     ctrl:'Bouger : stick / WASD / flèches · HOP : A / Espace / Entrée · Pause : Échap · Son : M · Plein écran : F',
-    touch:'Glisse le doigt : le fermier suit · Bouton HOP : faire peur', btn:'HOP',
+    touch:'Gauche : bouger · Droite : HOP', btn:'HOP', rotate:'Tourne ton téléphone !', fs:'Plein écran',
     thump:'BOUM!', strike:'STRIKE!', egg:'ŒUF! +10', egg0:'ŒUF!', yawn:'BÂÂÂILLE…', hifive:'TOPE LÀ!', bell:'CLOCHE!', gold:'MOUTON D’OR!', stink:'BEURK!',
     sticker:'Nouvel autocollant !', stickers:'Autocollants', back:'HOP = retour', woof:'OUAF!', saved:'SAUVÉ!', locked:'Termine des niveaux pour gagner des autocollants !',
     names:['Pompon','Frisette','Caramel','Nuage','Bouclette','Choupette','Biscotte','Barnabé','Flocon','Praline','Gribouille','Noisette','Doudou','Câlin','Mimi','Titou'] },
@@ -33,7 +33,7 @@ const T = {
     hopp:'HUP HUP!', fart:'PFFRT!', baa:'BAAA!', oops:'WHOOPS!', squish:'SQUISH!', pop:'POP!', boing:'BOING!', bonk:'BONK!', help:'HELP!',
     yelp:'YELP!', ribbit:'RIBBIT!', cluck:'BAWK!', disco:'DISCO!', hihi:'HEHE!', cough:'COUGH!', wolf:'WOLF!', yum:'YUM!', splash:'SPLASH!',
     ctrl:'Move: stick / WASD / arrows · HUP: A / Space / Enter · Pause: Esc · Sound: M · Fullscreen: F',
-    touch:'Drag your finger: the farmer follows · HUP button: scare', btn:'HUP',
+    touch:'Left side: move · Right side: HUP', btn:'HUP', rotate:'Turn your phone sideways!', fs:'Fullscreen',
     thump:'THUD!', strike:'STRIKE!', egg:'EGG! +10', egg0:'EGG!', yawn:'YAAAWN…', hifive:'HIGH FIVE!', bell:'BELL!', gold:'GOLDEN SHEEP!', stink:'PEE-YEW!',
     sticker:'New sticker!', stickers:'Stickers', back:'HUP = back', woof:'WOOF!', saved:'SAVED!', locked:'Finish levels to earn stickers!',
     names:['Fluffy','Woolly','Cupcake','Dolly','Marshmallow','Biscuit','Noodle','Pickles','Cloud','Lambert','Muffin','Bubbles','Button','Pudding','Snowy','Jellybean'] }
@@ -298,26 +298,51 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
-function toggleFS() { try { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); else document.exitFullscreen(); } catch (e) {} }
+const isFS = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+function lockLandscape() { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }
+function enterFS() {
+  const el = document.documentElement;
+  try {
+    if (el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' }).then(lockLandscape).catch(() => {});
+    else if (el.webkitRequestFullscreen) { el.webkitRequestFullscreen(); lockLandscape(); }
+  } catch (e) {}
+}
+function exitFS() { try { if (document.exitFullscreen) document.exitFullscreen().catch(() => {}); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); } catch (e) {} }
+function toggleFS() { if (isFS()) exitFS(); else enterFS(); }
+const canFS = () => !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+const isPortrait = () => usingTouch && innerHeight > innerWidth * 1.05;
 
 // pointer / touch
 let usingTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-const ptr = { moveId: null, wx: 0, wy: 0, active: false, actQueued: false };
+const ptr = { joyId: null, jx0: 0, jy0: 0, jx: 0, jy: 0, actQueued: false };
 let HITS = [];
-function toWorld(px, py) { return { x: (px * DPR - OX) / S, y: (py * DPR - OY) / S }; }
-cv.addEventListener('pointerdown', e => {
-  initAudio(); if (e.pointerType !== 'mouse') usingTouch = true;
-  const dx = e.clientX * DPR, dy = e.clientY * DPR;
-  for (let i = HITS.length - 1; i >= 0; i--) { const h = HITS[i]; if (dx >= h.x && dx <= h.x + h.w && dy >= h.y && dy <= h.y + h.h) { h.fn(); e.preventDefault(); return; } }
-  if (state === 'album') { state = 'title'; SFX.blip(); return; }
-  if (state === 'title') { if (!players.some(p => p.dev === 'touch') && players.length < 2) joinDevice('touch'); return; }
-  if (state === 'clear' || state === 'timeup') { ptr.actQueued = true; return; }
-  ptr.moveId = e.pointerId; const w = toWorld(e.clientX, e.clientY); ptr.wx = w.x; ptr.wy = w.y; ptr.active = true;
-  try { cv.setPointerCapture(e.pointerId); } catch (er) {}
-});
-cv.addEventListener('pointermove', e => { if (e.pointerId === ptr.moveId) { const w = toWorld(e.clientX, e.clientY); ptr.wx = w.x; ptr.wy = w.y; } });
-const ptrUp = e => { if (e.pointerId === ptr.moveId) { ptr.moveId = null; ptr.active = false; } };
-cv.addEventListener('pointerup', ptrUp); cv.addEventListener('pointercancel', ptrUp);
+const JOY_R = () => Math.min(cv.width, cv.height) * 0.13;
+function onDown(id, cxp, cyp, isMouse) {
+  initAudio(); if (!isMouse) usingTouch = true;
+  const dx = cxp * DPR, dy = cyp * DPR;
+  for (let i = HITS.length - 1; i >= 0; i--) { const h = HITS[i]; if (dx >= h.x && dx <= h.x + h.w && dy >= h.y && dy <= h.y + h.h) { h.fn(); return true; } }
+  if (isPortrait()) return true;
+  if (state === 'album') { state = 'title'; SFX.blip(); return true; }
+  if (state === 'title') { if (!players.some(p => p.dev === 'touch') && players.length < 2) joinDevice('touch'); return true; }
+  if (state === 'clear' || state === 'timeup') { ptr.actQueued = true; return true; }
+  if (state !== 'play') return true;
+  if (dx < cv.width * 0.55) { if (ptr.joyId === null) { ptr.joyId = id; ptr.jx0 = ptr.jx = dx; ptr.jy0 = ptr.jy = dy; } }
+  else ptr.actQueued = true;
+  return true;
+}
+function onMove(id, cxp, cyp) { if (id === ptr.joyId) { ptr.jx = cxp * DPR; ptr.jy = cyp * DPR; const r = JOY_R(), ox = ptr.jx - ptr.jx0, oy = ptr.jy - ptr.jy0, d = Math.hypot(ox, oy); if (d > r * 1.4) { ptr.jx0 += ox / d * (d - r * 1.4); ptr.jy0 += oy / d * (d - r * 1.4); } } }
+function onUp(id) { if (id === ptr.joyId) ptr.joyId = null; }
+if (window.PointerEvent) {
+  cv.addEventListener('pointerdown', e => { if (onDown(e.pointerId, e.clientX, e.clientY, e.pointerType === 'mouse')) e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (er) {} });
+  cv.addEventListener('pointermove', e => onMove(e.pointerId, e.clientX, e.clientY));
+  cv.addEventListener('pointerup', e => onUp(e.pointerId)); cv.addEventListener('pointercancel', e => onUp(e.pointerId));
+} else {
+  cv.addEventListener('touchstart', e => { e.preventDefault(); for (const t of e.changedTouches) onDown(t.identifier, t.clientX, t.clientY, false); }, { passive: false });
+  cv.addEventListener('touchmove', e => { e.preventDefault(); for (const t of e.changedTouches) onMove(t.identifier, t.clientX, t.clientY); }, { passive: false });
+  const te = e => { for (const t of e.changedTouches) onUp(t.identifier); };
+  cv.addEventListener('touchend', te); cv.addEventListener('touchcancel', te);
+  cv.addEventListener('mousedown', e => onDown('m', e.clientX, e.clientY, true));
+}
 cv.addEventListener('contextmenu', e => e.preventDefault());
 
 const DEVS = ['kb1', 'kb2', 'gp0', 'gp1', 'gp2', 'gp3', 'touch'];
@@ -330,8 +355,7 @@ function pollInput() {
       const m = KB[id], any = l => l.some(c => keys[c]);
       if (any(m.left)) x -= 1; if (any(m.right)) x += 1; if (any(m.up)) y -= 1; if (any(m.down)) y += 1; act = any(m.act);
     } else if (id === 'touch') {
-      const f = L && L.farmers && L.farmers.find(f => f.dev === 'touch');
-      if (ptr.active && f) { const dx = ptr.wx - f.x, dy = ptr.wy - (f.y - 6), dd = Math.hypot(dx, dy); if (dd > 5) { const k = Math.min(1, dd / 18); x = dx / dd * k; y = dy / dd * k; } }
+      if (ptr.joyId !== null) { const r = JOY_R(), ox = ptr.jx - ptr.jx0, oy = ptr.jy - ptr.jy0, d = Math.hypot(ox, oy); if (d > r * 0.15) { const k = Math.min(1, d / r); x = ox / d * k; y = oy / d * k; } }
       act = ptr.actQueued; ptr.actQueued = false;
     } else {
       const gp = pads[+id[2]];
@@ -944,16 +968,18 @@ function updTitle(dt) {
   updWorld(dt); updEvents(dt);
   for (const s of L.sheep) if (s.penned && R() < dt * 0.08) { s.penned = false; s.vz = 180; s.vx = -60; s.landBoing = true; }
 }
-const PAUSE_ITEMS = ['resume', 'restart', 'menu'];
+const PAUSE_ITEMS = ['resume', 'restart', 'fs', 'menu'];
 function pauseAct() {
   SFX.blip(); const it = PAUSE_ITEMS[pauseIdx];
-  if (it === 'resume') state = L._prev || 'play'; else if (it === 'restart') loadLevel(L.n); else { players = []; makeDemo(); state = 'title'; menuIdx = 4; }
+  if (it === 'resume') state = L._prev || 'play'; else if (it === 'restart') loadLevel(L.n); else if (it === 'fs') toggleFS(); else { players = []; makeDemo(); state = 'title'; menuIdx = 4; }
 }
 function updPause() {
-  for (const p of players) { const d = dev[p.dev]; if (d.nyP) { pauseIdx = clamp(pauseIdx + d.nyP, 0, 2); SFX.blip(); } if (d.actP) { pauseAct(); return; } }
+  for (const p of players) { const d = dev[p.dev]; if (d.nyP) { pauseIdx = clamp(pauseIdx + d.nyP, 0, PAUSE_ITEMS.length - 1); SFX.blip(); } if (d.actP) { pauseAct(); return; } }
 }
 function update(dt) {
+  if (ptr.actQueued) ptr.actFlash = 0.15; ptr.actFlash = (ptr.actFlash || 0) - dt;
   pollInput(); musicTick();
+  if (isPortrait() && state === 'play') { L._prev = 'play'; state = 'pause'; pauseIdx = 0; ptr.joyId = null; }
   const padPause = players.some(p => dev[p.dev].pauseP);
   if ((pauseReq || padPause) && state !== 'album') {
     pauseReq = false;
@@ -1180,18 +1206,36 @@ function renderHUD() {
 }
 function renderTouch() {
   if (!usingTouch || !players.some(p => p.dev === 'touch')) return;
-  const u = S, r = Math.min(cv.width, cv.height) * 0.11, cx = cv.width - r - 18 * DPR - OX * 0, cy = cv.height - r - 18 * DPR;
+  const u = S, m = Math.min(cv.width, cv.height), r = m * 0.12, cx = cv.width - r - m * 0.07, cy = cv.height - r - m * 0.07;
   if (state === 'play') {
-    ctx.globalAlpha = 0.85; ctx.fillStyle = '#e5484d'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+    // joystick
+    const jr = JOY_R();
+    const bx = ptr.joyId !== null ? ptr.jx0 : m * 0.07 + jr, by = ptr.joyId !== null ? ptr.jy0 : cv.height - m * 0.07 - jr;
+    ctx.globalAlpha = ptr.joyId !== null ? 0.55 : 0.3; ctx.fillStyle = '#2a1d33'; ctx.beginPath(); ctx.arc(bx, by, jr, 0, 7); ctx.fill();
+    ctx.lineWidth = m * 0.008; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+    let kx = bx, ky = by; if (ptr.joyId !== null) { const ox = ptr.jx - bx, oy = ptr.jy - by, d = Math.hypot(ox, oy), k = Math.min(1, jr / (d || 1)); kx = bx + ox * k; ky = by + oy * k; }
+    ctx.globalAlpha = ptr.joyId !== null ? 0.9 : 0.55; ctx.fillStyle = '#f6cf55'; ctx.beginPath(); ctx.arc(kx, ky, jr * 0.45, 0, 7); ctx.fill(); ctx.lineWidth = m * 0.01; ctx.strokeStyle = '#2a1d33'; ctx.stroke();
+    ctx.globalAlpha = 1;
+    // HOPP button
+    const pressed = ptr.actFlash > 0;
+    ctx.globalAlpha = 0.88; ctx.fillStyle = pressed ? '#ff7a7e' : '#e5484d'; ctx.beginPath(); ctx.arc(cx, cy, r * (pressed ? 0.92 : 1), 0, 7); ctx.fill();
     ctx.lineWidth = r * 0.12; ctx.strokeStyle = '#2a1d33'; ctx.stroke(); ctx.globalAlpha = 1;
     txt(tr('btn'), cx, cy, r * 0.5, '#fff');
-    addHit(cx - r, cy - r, r * 2, r * 2, () => { ptr.actQueued = true; });
   }
   if (state === 'play' || state === 'clear' || state === 'timeup') {
     const b = 14 * u, bx = sx(W - 4) - b, by = sy(3);
     pill(bx, by, b, 13 * u); ctx.fillStyle = '#fff'; ctx.fillRect(bx + b * 0.33, by + 3.5 * u, 2 * u, 6 * u); ctx.fillRect(bx + b * 0.55, by + 3.5 * u, 2 * u, 6 * u);
-    addHit(bx, by, b, 13 * u, () => { L._prev = state; state = 'pause'; pauseIdx = 0; });
+    addHit(bx - 4 * u, by - 4 * u, b + 8 * u, 21 * u, () => { L._prev = state; state = 'pause'; pauseIdx = 0; ptr.joyId = null; });
   }
+}
+function renderRotate() {
+  ctx.fillStyle = '#1b1426'; ctx.fillRect(0, 0, cv.width, cv.height);
+  const cx = cv.width / 2, cy = cv.height * 0.42, m = Math.min(cv.width, cv.height), a = Math.sin(performance.now() / 500) * 0.5 - 0.6;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(a); ctx.fillStyle = '#f6cf55'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = m * 0.015;
+  const w = m * 0.26, h = m * 0.46; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-w / 2, -h / 2, w, h, m * 0.04) : ctx.rect(-w / 2, -h / 2, w, h); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#79c653'; ctx.fillRect(-w / 2 + m * 0.02, -h / 2 + m * 0.04, w - m * 0.04, h - m * 0.08); ctx.font = `${Math.round(m * 0.12)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🐑', 0, 0);
+  ctx.restore();
+  txt(tr('rotate'), cx, cv.height * 0.75, m * 0.075, '#fff07a');
 }
 function renderTitle() {
   const u = S, cx = cv.width / 2;
@@ -1222,6 +1266,7 @@ function renderTitle() {
     txt(it, cx, y, size, sel ? '#ffffff' : '#e8dcff');
     addHit(cx - w / 2, y - 6.5 * u, w, 13 * u, () => {
       initAudio(); if (!players.length && usingTouch) joinDevice('touch');
+      if (i === 4 && usingTouch && canFS() && !isFS()) enterFS();
       menuIdx = i; if (i < 3) menuAct(1); else menuAct(0);
     });
   });
@@ -1236,6 +1281,7 @@ function renderTitle() {
   // sound toggle
   const mb = 13 * u, mx = sx(4), my = sy(4); pill(mx, my, mb * 1.6, 11 * u); txt(muted ? '🔇' : '🔊', mx + mb * 0.8, my + 5.5 * u, 7 * u, '#fff', 'center', false);
   addHit(mx, my, mb * 1.6, 11 * u, () => { initAudio(); setMute(!muted); });
+  if (canFS()) { const fx = mx + mb * 1.6 + 3 * u; pill(fx, my, mb * 1.6, 11 * u); txt(isFS() ? '⤢' : '⛶', fx + mb * 0.8, my + 5.5 * u, 8 * u, '#fff', 'center', false); addHit(fx, my, mb * 1.6, 11 * u, toggleFS); }
 }
 function renderAlbum() {
   const u = S, cx = cv.width / 2;
@@ -1294,6 +1340,7 @@ function render() {
   ctx.imageSmoothingEnabled = false; ctx.drawImage(wc, OX + sh, OY + sh * 0.5, W * S, H * S);
   renderTexts();
   const blitSun = () => { drawSun(); const sp = sunPos(); ctx.drawImage(sunC, sx(sp.x - 13), sy(sp.y - 13), 26 * S, 26 * S); };
+  if (isPortrait()) { renderRotate(); return; }
   if (state === 'title') { blitSun(); renderTitle(); }
   else if (state === 'album') { blitSun(); renderAlbum(); }
   else { renderHUD(); blitSun(); renderState(); renderTouch(); }
